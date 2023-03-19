@@ -2,11 +2,21 @@ use std::{
     env::VarError,
     path::{Path, PathBuf},
     process::Command,
+    str::from_utf8,
 };
 
 use clap::Parser;
 
-fn main() {}
+fn main() -> std::io::Result<()> {
+    let cbw = Cbw::parse();
+    let mode = if cbw.release {
+        BuildMode::Release
+    } else {
+        BuildMode::Debug
+    };
+    let wrapper = CargoBuildWrapper::from_env(mode).unwrap();
+    wrapper.build()
+}
 
 #[derive(Debug, Parser)]
 struct Cbw {
@@ -29,7 +39,21 @@ impl CargoBuildWrapper {
     }
     fn from_env(mode: BuildMode) -> Result<Self, VarError> {
         let copy_dir = std::env::var("RUST_BIN_PATH")?;
-        Ok(Self { mode, copy_dir })
+        Ok(Self::new(mode, copy_dir))
+    }
+    fn build(&self) -> std::io::Result<()> {
+        let mut command = std::process::Command::new("cargo");
+        let result = match self.mode {
+            BuildMode::Release => command.args(["build", "--release"]).output()?,
+            BuildMode::Debug => command.args(["build"]).output()?,
+        };
+        if result.status.success() {
+            println!("{:#?}", result.stdout);
+        } else {
+            println!("error cause");
+            println!("{:#?}", from_utf8(&result.stderr));
+        }
+        self.cp_exes()
     }
     fn get_exe_filepaths(&self) -> Vec<PathBuf> {
         match self.mode {
@@ -46,22 +70,6 @@ impl CargoBuildWrapper {
             cp(&path, &self.copy_dir)?;
         }
         Ok(())
-    }
-    fn exe(&self) -> std::io::Result<()> {
-        let command_arg = match self.mode {
-            BuildMode::Release => "--release",
-            BuildMode::Debug => "",
-        };
-        let result = std::process::Command::new("cargo")
-            .args(["build", command_arg])
-            .output()?;
-        if result.status.success() {
-            println!("{:#?}", result.stdout);
-        } else {
-            println!("error cause");
-            println!("{:#?}", result.stderr);
-        }
-        self.cp_exes()
     }
 }
 
@@ -91,11 +99,6 @@ fn ls_files(dir: impl AsRef<Path>) -> Vec<PathBuf> {
     }
 }
 
-fn cp(from: &str, to: &str) -> std::io::Result<()> {
-    let command = Command::new("cp").args(["-r", from, to]).output()?;
-    Ok(())
-}
-
 fn get_exe_filepaths(dir: &str) -> Vec<PathBuf> {
     #[cfg(not(target_os = "windows"))]
     fn is_exe_file(path: &PathBuf) -> bool {
@@ -111,6 +114,10 @@ fn get_exe_filepaths(dir: &str) -> Vec<PathBuf> {
             == Some(Some("exe"))
     }
     ls_files(dir).into_iter().filter(is_exe_file).collect()
+}
+fn cp(from: &str, to: &str) -> std::io::Result<()> {
+    Command::new("cp").args(["-r", from, to]).output()?;
+    Ok(())
 }
 
 #[cfg(test)]
