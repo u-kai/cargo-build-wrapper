@@ -1,15 +1,14 @@
 use std::{
     env::VarError,
     fs::File,
-    io::Write,
+    io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
-    process::Command,
-    str::from_utf8,
+    process::{Command, Stdio},
 };
 
 use clap::{Parser, Subcommand};
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cw = Cw::parse();
     match cw.sub {
         Sub::Build { release } => {
@@ -60,7 +59,7 @@ impl CargoNewWrapper {
     fn new(name: impl Into<String>) -> Self {
         Self { name: name.into() }
     }
-    fn create_new_cli_project(&self) -> std::io::Result<()> {
+    fn create_new_cli_project(&self) -> Result<(), Box<dyn std::error::Error>> {
         self.create_new_project()?;
         let project_root: &Path = self.name.as_ref();
         let cargo_toml_content = format!(
@@ -106,17 +105,43 @@ fn main() {{
         write_file(project_root.join("src/main.rs"), &main_fn)?;
         Ok(())
     }
-    fn create_new_project(&self) -> std::io::Result<()> {
-        let mut command = std::process::Command::new("cargo");
-        let result = command.args(["new", self.name.as_str()]).output()?;
-        if result.status.success() {
-            println!("{:#?}", result.stdout);
-        } else {
-            println!("error cause");
-            println!("{:#?}", from_utf8(&result.stderr));
-        }
-        Ok(())
+    fn create_new_project(&self) -> Result<(), Box<dyn std::error::Error>> {
+        run_command("cargo", &["new", self.name.as_str()])
+        //let mut command = std::process::Command::new("cargo");
+        //let result = command.args(["new", self.name.as_str()]).output()?;
+        //if !result.status.success() {
+        //println!("error cause");
+        //println!("{:#?}", from_utf8(&result.stderr));
+        //}
+        //Ok(())
     }
+}
+
+fn run_command(program: &str, commands: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::new(program);
+    cmd.args(commands);
+
+    let child = cmd
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to execute child process");
+
+    if let Some(stdout) = child.stdout {
+        let stdout_reader = BufReader::new(stdout);
+        for line in stdout_reader.lines() {
+            println!("{}", line?);
+        }
+    };
+    if let Some(stderr) = child.stderr {
+        let stderr_reader = BufReader::new(stderr);
+
+        for line in stderr_reader.lines() {
+            println!("{}", line?);
+        }
+    };
+
+    Ok(())
 }
 fn write_file(path: impl AsRef<Path>, content: &str) -> std::io::Result<()> {
     let mut file = File::create(path)?;
@@ -141,19 +166,11 @@ impl CargoBuildWrapper {
         let copy_dir = std::env::var("RUST_BIN_PATH")?;
         Ok(Self::new(mode, copy_dir))
     }
-    fn build(&self) -> std::io::Result<()> {
-        let mut command = std::process::Command::new("cargo");
-        let result = match self.mode {
-            BuildMode::Release => command.args(["build", "--release"]).output()?,
-            BuildMode::Debug => command.args(["build"]).output()?,
+    fn build(&self) -> Result<(), Box<dyn std::error::Error>> {
+        match self.mode {
+            BuildMode::Release => run_command("cargo", &["build", "--release"])?,
+            BuildMode::Debug => run_command("cargo", &["build"])?,
         };
-
-        if result.status.success() {
-            println!("{:#?}", result.stdout);
-        } else {
-            println!("error cause");
-            println!("{:#?}", from_utf8(&result.stderr));
-        }
         self.cp_exes()
     }
     fn get_exe_filepaths(&self) -> Vec<PathBuf> {
@@ -162,7 +179,7 @@ impl CargoBuildWrapper {
             BuildMode::Debug => get_exe_filepaths(Self::DEBUG_TARGET_DIR),
         }
     }
-    fn cp_exes(&self) -> std::io::Result<()> {
+    fn cp_exes(&self) -> Result<(), Box<dyn std::error::Error>> {
         for path in self
             .get_exe_filepaths()
             .into_iter()
@@ -216,9 +233,8 @@ fn get_exe_filepaths(dir: &str) -> Vec<PathBuf> {
     }
     ls_files(dir).into_iter().filter(is_exe_file).collect()
 }
-fn cp(from: &str, to: &str) -> std::io::Result<()> {
-    Command::new("cp").args(["-r", from, to]).output()?;
-    Ok(())
+fn cp(from: &str, to: &str) -> Result<(), Box<dyn std::error::Error>> {
+    run_command("cp", &["-r", from, to])
 }
 
 #[cfg(test)]
