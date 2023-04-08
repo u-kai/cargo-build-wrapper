@@ -1,27 +1,127 @@
 use std::{
     env::VarError,
+    fs::File,
+    io::Write,
     path::{Path, PathBuf},
     process::Command,
     str::from_utf8,
 };
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 fn main() -> std::io::Result<()> {
-    let cbw = Cbw::parse();
-    let mode = if cbw.release {
-        BuildMode::Release
-    } else {
-        BuildMode::Debug
-    };
-    let wrapper = CargoBuildWrapper::from_env(mode).unwrap();
-    wrapper.build()
+    let cw = Cw::parse();
+    match cw.sub {
+        Sub::Build { release } => {
+            let mode = if release {
+                BuildMode::Release
+            } else {
+                BuildMode::Debug
+            };
+            let wrapper = CargoBuildWrapper::from_env(mode).unwrap();
+            wrapper.build()
+        }
+        Sub::New { cli, name } => {
+            let new = CargoNewWrapper::new(name);
+            if cli {
+                new.create_new_cli_project()
+            } else {
+                new.create_new_project()
+            }
+        }
+    }
 }
 
-#[derive(Debug, Parser)]
-struct Cbw {
-    #[clap(short, long)]
-    release: bool,
+#[derive(Parser)]
+struct Cw {
+    #[clap(subcommand)]
+    sub: Sub,
+}
+
+#[derive(Subcommand)]
+enum Sub {
+    Build {
+        #[clap(short, long)]
+        release: bool,
+    },
+    New {
+        name: String,
+        #[clap(short, long)]
+        cli: bool,
+    },
+}
+
+struct CargoNewWrapper {
+    name: String,
+}
+impl CargoNewWrapper {
+    const CLAP_VERSION: &'static str = "4.2.1";
+    const RUST_EDITION: &'static str = "2021";
+    fn new(name: impl Into<String>) -> Self {
+        Self { name: name.into() }
+    }
+    fn create_new_cli_project(&self) -> std::io::Result<()> {
+        self.create_new_project()?;
+        let project_root: &Path = self.name.as_ref();
+        let cargo_toml_content = format!(
+            r#"[package]
+name = "{}"
+version = "0.1.0"
+edition = "{}"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = {{ version = "{}", features = ["derive"] }}"#,
+            self.name.as_str(),
+            Self::RUST_EDITION,
+            Self::CLAP_VERSION
+        );
+
+        let main_fn = format!(
+            r#"// this is create auto
+use clap::{{Parser, Subcommand}};
+#[derive(Parser)]
+struct Cli {{
+    #[clap(subcommand)]
+    sub: Sub,
+}}
+
+#[derive(Subcommand)]
+enum Sub {{
+    // sub command hear
+    //#[clap(short, long)]
+        
+}}
+
+fn main() {{
+    let cli = Cli::parse();
+    //match cli  {{
+    //    Sub
+    //}}
+}}
+        "#
+        );
+        write_file(project_root.join("Cargo.toml"), &cargo_toml_content)?;
+        write_file(project_root.join("src/main.rs"), &main_fn)?;
+        Ok(())
+    }
+    fn create_new_project(&self) -> std::io::Result<()> {
+        let mut command = std::process::Command::new("cargo");
+        let result = command.args(["new", self.name.as_str()]).output()?;
+        if result.status.success() {
+            println!("{:#?}", result.stdout);
+        } else {
+            println!("error cause");
+            println!("{:#?}", from_utf8(&result.stderr));
+        }
+        Ok(())
+    }
+}
+fn write_file(path: impl AsRef<Path>, content: &str) -> std::io::Result<()> {
+    let mut file = File::create(path)?;
+    file.write_all(content.as_bytes())?;
+    Ok(())
 }
 struct CargoBuildWrapper {
     mode: BuildMode,
@@ -47,6 +147,7 @@ impl CargoBuildWrapper {
             BuildMode::Release => command.args(["build", "--release"]).output()?,
             BuildMode::Debug => command.args(["build"]).output()?,
         };
+
         if result.status.success() {
             println!("{:#?}", result.stdout);
         } else {
