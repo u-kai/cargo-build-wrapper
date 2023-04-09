@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     env::VarError,
     fs::File,
     io::{BufRead, BufReader, Write},
@@ -107,13 +108,42 @@ fn main() {{
     }
     fn create_new_project(&self) -> Result<(), Box<dyn std::error::Error>> {
         run_command("cargo", &["new", self.name.as_str()])
-        //let mut command = std::process::Command::new("cargo");
-        //let result = command.args(["new", self.name.as_str()]).output()?;
-        //if !result.status.success() {
-        //println!("error cause");
-        //println!("{:#?}", from_utf8(&result.stderr));
-        //}
-        //Ok(())
+    }
+}
+
+struct CargoTomlContent {
+    name: String,
+    dependencies: Vec<CargoDepend>,
+    edition: RustEdition,
+}
+struct CargoDepend {
+    name: String,
+    version: String,
+    attr: HashMap<String, String>,
+}
+enum RustEdition {
+    V2021,
+    V2018,
+    V2015,
+}
+
+impl CargoDepend {
+    fn new(name: impl Into<String>, version: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            version: version.into(),
+            attr: HashMap::new(),
+        }
+    }
+    fn gen_statement(&self) -> String {
+        if self.attr.len() == 0 {
+            format!(r#"{} = "{}""#, self.name, self.version)
+        } else {
+            format!("")
+        }
+    }
+    fn add_attr(&mut self, name: impl Into<String>, value: impl Into<String>) {
+        self.attr.insert(name.into(), value.into());
     }
 }
 
@@ -240,6 +270,13 @@ fn cp(from: &str, to: &str) -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn cargo_toml_depend_test() {
+        let sut = CargoDepend::new("clap", "3.0.4");
+        let expect = r#"clap = "3.0.4""#;
+
+        assert_eq!(sut.gen_statement(), expect);
+    }
     #[test]
     fn for_testからファイルのパスをすべて取得する() {
         let exes = ls_files("for-test");
