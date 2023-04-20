@@ -12,8 +12,40 @@ impl CargoNewWrapper {
     const CLAP_VERSION: &'static str = "4.2.1";
     const ACTIX_WEB_VERSION: &'static str = "4";
     const TOKIO_VERSION: &'static str = "1";
+    const REQWEST_VERSION: &'static str = "0.11";
+    const SERDE_VERSION: &'static str = "1";
     pub fn new(name: impl Into<String>) -> Self {
         Self { name: name.into() }
+    }
+    pub fn create_new_client_project(&self) -> Result<(), Box<dyn std::error::Error>> {
+        self.create_new_project()?;
+        let project_root: &Path = self.name.as_ref();
+        let mut cargo_toml_content = CargoTomlContent::new(self.name.as_str());
+        cargo_toml_content.add_depend_with_attr(
+            "tokio",
+            Self::TOKIO_VERSION,
+            ("features", vec!["full"]),
+        );
+        cargo_toml_content.add_depend("reqwest", Self::REQWEST_VERSION);
+        cargo_toml_content.add_depend_with_attr(
+            "serde",
+            Self::SERDE_VERSION,
+            ("features", vec!["derive"]),
+        );
+        cargo_toml_content.add_depend("serde_json", Self::SERDE_VERSION);
+        let main = format!(
+            r#"#[tokio::main]
+async fn main() {{
+    let mut map = std::collections::HashMap::new();
+    map.insert("lang","rust");
+    map.insert("body","json");
+    let client = reqwest::Client::new();
+    let res = client.post("http://httpbin.org/post").json(&map).send().await().unwrap();
+}}"#
+        );
+        write_file(project_root.join("Cargo.toml"), &cargo_toml_content.gen())?;
+        write_file(project_root.join("src/main.rs"), &main)?;
+        Ok(())
     }
     pub fn create_new_web_project(&self) -> Result<(), Box<dyn std::error::Error>> {
         self.create_new_project()?;

@@ -16,13 +16,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let wrapper = CargoBuildWrapper::from_env(mode).unwrap();
             wrapper.build()
         }
-        Sub::New { cli, name, web } => {
+        Sub::New {
+            cli,
+            name,
+            web,
+            remote_client,
+        } => {
             let new = CargoNewWrapper::new(name);
             if cli {
                 return new.create_new_cli_project();
             }
             if web {
                 return new.create_new_web_project();
+            }
+            if remote_client {
+                return new.create_new_client_project();
             }
             new.create_new_project()
         }
@@ -47,5 +55,7 @@ enum Sub {
         cli: bool,
         #[clap(short, long)]
         web: bool,
+        #[clap(short, long)]
+        remote_client: bool,
     },
 }
