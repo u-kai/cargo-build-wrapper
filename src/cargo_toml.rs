@@ -13,6 +13,22 @@ impl CargoTomlContent {
             edition: RustEdition::V2021,
         }
     }
+    #[allow(dead_code)]
+    pub fn new_2018(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            dependencies: Vec::new(),
+            edition: RustEdition::V2018,
+        }
+    }
+    #[allow(dead_code)]
+    pub fn new_2015(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            dependencies: Vec::new(),
+            edition: RustEdition::V2015,
+        }
+    }
     pub fn gen(&self) -> String {
         let expected = format!(
             r#"[package]
