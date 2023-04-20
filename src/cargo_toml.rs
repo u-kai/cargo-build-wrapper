@@ -50,14 +50,18 @@ edition = "{}"
             format!("{}\n{}", acc, cur.gen_statement())
         })
     }
-    pub fn add_depend(
+    pub fn add_depend(&mut self, name: impl Into<String>, version: impl Into<String>) {
+        let depend = CargoDepend::new(name, version);
+        self.dependencies.push(depend);
+    }
+    pub fn add_depend_with_attr(
         &mut self,
         name: impl Into<String>,
         version: impl Into<String>,
-        map: (impl Into<String>, impl IntoAttrStr),
+        attr: (impl Into<String>, impl IntoAttrStr),
     ) {
         let mut depend = CargoDepend::new(name, version);
-        depend.add_attr(map.0, map.1);
+        depend.add_attr(attr.0, attr.1);
         self.dependencies.push(depend);
     }
 }
@@ -142,7 +146,7 @@ clap = {{ version = "3", features = ["derive"] }}"#,
             name
         );
         let mut content = CargoTomlContent::new(name);
-        content.add_depend("clap", "3", ("features", vec!["derive"]));
+        content.add_depend_with_attr("clap", "3", ("features", vec!["derive"]));
         assert_eq!(content.gen(), expected);
     }
     #[test]

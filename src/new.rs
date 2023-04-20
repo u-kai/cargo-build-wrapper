@@ -10,14 +10,50 @@ pub struct CargoNewWrapper {
 }
 impl CargoNewWrapper {
     const CLAP_VERSION: &'static str = "4.2.1";
+    const ACTIX_WEB_VERSION: &'static str = "4";
+    const TOKIO_VERSION: &'static str = "1";
     pub fn new(name: impl Into<String>) -> Self {
         Self { name: name.into() }
+    }
+    pub fn create_new_web_project(&self) -> Result<(), Box<dyn std::error::Error>> {
+        self.create_new_project()?;
+        let project_root: &Path = self.name.as_ref();
+        let mut cargo_toml_content = CargoTomlContent::new(self.name.as_str());
+        cargo_toml_content.add_depend("actix-web", Self::ACTIX_WEB_VERSION);
+        let main = format!(
+            r#"use actix_web::{{web, App, HttpResponse, HttpServer, Responder}};
+            
+#[actix_web::get("/")]
+async fn hello() -> impl Responder {{
+    HttpResponse::Ok().body("Hello world!")
+}}
+            
+#[actix_web::post("/echo")]
+async fn echo(req_body: String) -> impl Responder {{
+    HttpResponse::Ok().body(req_body)
+}}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {{
+    HttpServer::new(|| App::new().service(hello).service(echo))
+        .bind(("127.0.0.1", 8080))?
+        .run()
+        .await
+}}"#
+        );
+        write_file(project_root.join("Cargo.toml"), &cargo_toml_content.gen())?;
+        write_file(project_root.join("src/main.rs"), &main)?;
+        Ok(())
     }
     pub fn create_new_cli_project(&self) -> Result<(), Box<dyn std::error::Error>> {
         self.create_new_project()?;
         let project_root: &Path = self.name.as_ref();
         let mut cargo_toml_content = CargoTomlContent::new(self.name.as_str());
-        cargo_toml_content.add_depend("clap", Self::CLAP_VERSION, ("features", vec!["derive"]));
+        cargo_toml_content.add_depend_with_attr(
+            "clap",
+            Self::CLAP_VERSION,
+            ("features", vec!["derive"]),
+        );
         let cargo_toml_content = cargo_toml_content.gen();
         let main_fn = format!(
             r#"// this is create auto

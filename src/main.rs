@@ -1,5 +1,3 @@
-
-
 use clap::{Parser, Subcommand};
 use cw::{
     build::{BuildMode, CargoBuildWrapper},
@@ -18,13 +16,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let wrapper = CargoBuildWrapper::from_env(mode).unwrap();
             wrapper.build()
         }
-        Sub::New { cli, name } => {
+        Sub::New { cli, name, web } => {
             let new = CargoNewWrapper::new(name);
             if cli {
-                new.create_new_cli_project()
-            } else {
-                new.create_new_project()
+                return new.create_new_cli_project();
             }
+            if web {
+                return new.create_new_web_project();
+            }
+            new.create_new_project()
         }
     }
 }
@@ -45,5 +45,7 @@ enum Sub {
         name: String,
         #[clap(short, long)]
         cli: bool,
+        #[clap(short, long)]
+        web: bool,
     },
 }
