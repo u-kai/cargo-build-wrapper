@@ -51,7 +51,12 @@ async fn main() {{
         self.create_new_project()?;
         let project_root: &Path = self.name.as_ref();
         let mut cargo_toml_content = CargoTomlContent::new(self.name.as_str());
-        cargo_toml_content.add_depend("actix-web", Self::ACTIX_WEB_VERSION);
+        cargo_toml_content.add_depend_with_attr(
+            "actix-web",
+            Self::ACTIX_WEB_VERSION,
+            ("features", vec!["rustls"]),
+        );
+        cargo_toml_content.add_depend("rustls", "0.21.0");
         let main = format!(
             r#"use actix_web::{{web, App, HttpResponse, HttpServer, Responder}};
             
@@ -75,6 +80,7 @@ async fn main() -> std::io::Result<()> {{
         );
         write_file(project_root.join("Cargo.toml"), &cargo_toml_content.gen())?;
         write_file(project_root.join("src/main.rs"), &main)?;
+        write_file(project_root.join("Dockerfile"), &self.create_docker_file())?;
         Ok(())
     }
     pub fn create_new_cli_project(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -117,5 +123,21 @@ fn main() {{
     }
     pub fn create_new_project(&self) -> Result<(), Box<dyn std::error::Error>> {
         run_command("cargo", &["new", self.name.as_str()])
+    }
+
+    fn create_docker_file(&self) -> String {
+        format!(
+            r#"FROM ekidd/rust-musl-builder:1.51.0 AS builder
+ADD --chown=rust:rust . ./
+RUN cargo build --release
+        
+# final. application layer
+FROM busybox:musl
+COPY --from=builder /home/rust/src/target/x86_64-unknown-linux-musl/release/{} ./{}
+CMD ["./{}"]"#,
+            self.name.as_str(),
+            self.name.as_str(),
+            self.name.as_str()
+        )
     }
 }
