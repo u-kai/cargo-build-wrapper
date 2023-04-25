@@ -77,6 +77,10 @@ impl FnBuilder {
             self.content
         )
     }
+    pub fn add_arg(mut self, key: impl Into<Arg>, type_: impl Into<Type>) -> Self {
+        self.args.insert(key.into(), type_.into());
+        self
+    }
     pub fn add_line(mut self, line: &str) -> Self {
         self.content = format!("{}\n{}{}", self.content, Self::SPACE, line);
         self
@@ -95,10 +99,15 @@ impl FnBuilder {
     }
     fn create_prefix_fn(&self) -> String {
         if self.async_mode {
-            format!("async fn {}()", self.name)
+            format!("async fn {}({})", self.name, self.create_args())
         } else {
-            format!("fn {}()", self.name)
+            format!("fn {}({})", self.name, self.create_args())
         }
+    }
+    fn create_args(&self) -> String {
+        self.args.iter().fold(String::new(), |acc, (key, value)| {
+            format!("{}{}: {},", acc, key, value)
+        })
     }
 }
 #[cfg(test)]
@@ -123,6 +132,18 @@ async fn main() {
         .run()
         .await
 }"#
+        );
+    }
+    #[test]
+    fn 関数に引数を与えることができる() {
+        let main_str = FnBuilder::new("test")
+            .add_arg("key", "String")
+            .add_arg("key2", "usize")
+            .build();
+        assert_eq!(
+            main_str,
+            "fn test(key: String,key2: usize,) {
+}"
         );
     }
     #[test]
