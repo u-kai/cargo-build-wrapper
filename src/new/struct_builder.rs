@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 
+use crate::new::statements::add_rust_line;
+
 use super::statements::Attribute;
 
 type Key = String;
@@ -55,7 +57,7 @@ impl StructBuilder {
     }
     fn create_fields(&self) -> String {
         self.fields.iter().fold(String::new(), |acc, (key, value)| {
-            format!("{}\n{}{}: {},", acc, Self::SPACE, key, value)
+            add_rust_line(&acc, &format!("{}: {},", key, value))
         })
     }
 }
