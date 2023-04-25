@@ -1,11 +1,13 @@
 use std::collections::BTreeMap;
 
+use super::statements::Attribute;
+
 type Key = String;
 type Type = String;
 pub struct StructBuilder {
     name: String,
     fields: BTreeMap<Key, Type>,
-    attr: Option<String>,
+    attr: Option<Attribute>,
     is_pub: bool,
     derives: Vec<String>,
 }
@@ -45,7 +47,7 @@ impl StructBuilder {
     fn create_attr(&self) -> String {
         self.attr
             .as_ref()
-            .map(|s| format!("#[{}]\n", s))
+            .map(|attr| attr.to_string())
             .unwrap_or_default()
     }
     fn create_derives(&self) -> String {
@@ -56,6 +58,11 @@ impl StructBuilder {
             format!("{}\n{}{}: {},", acc, Self::SPACE, key, value)
         })
     }
+}
+
+#[derive(Debug)]
+struct Filed {
+    attr: Option<String>,
 }
 #[cfg(test)]
 mod tests {

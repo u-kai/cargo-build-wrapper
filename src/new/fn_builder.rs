@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 
+use super::statements::{Attribute, IntoAttr};
+
 #[derive(Debug)]
 pub struct MainBuilder {
     inner: FnBuilder,
@@ -39,7 +41,7 @@ pub struct FnBuilder {
     content: String,
     args: BTreeMap<Arg, Type>,
     retu: Option<Type>,
-    attr: Option<String>,
+    attr: Option<Attribute>,
     async_mode: bool,
 }
 
@@ -57,7 +59,7 @@ impl FnBuilder {
     }
     pub fn attr(self, attr: impl Into<String>) -> Self {
         Self {
-            attr: Some(attr.into()),
+            attr: Some(attr.into_attr()),
             ..self
         }
     }
@@ -98,7 +100,7 @@ impl FnBuilder {
     fn create_attr(&self) -> String {
         self.attr
             .as_ref()
-            .map(|s| format!("#[{}]\n", s))
+            .map(|attr| attr.to_string())
             .unwrap_or_default()
     }
     fn create_prefix_fn(&self) -> String {

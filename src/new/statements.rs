@@ -1,6 +1,7 @@
 pub fn add_rust_line(acc: &str, line: &str) -> String {
     format!("{}\n    {}", acc, line)
 }
+#[derive(Debug)]
 pub struct Attribute {
     values: Vec<String>,
 }
@@ -24,7 +25,7 @@ impl Attribute {
         }
     }
 }
-trait IntoAttr {
+pub trait IntoAttr {
     fn into_attr(self) -> Attribute;
 }
 impl<T> IntoAttr for T
