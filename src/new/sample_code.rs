@@ -1,8 +1,10 @@
+#[derive(Debug)]
 struct MainBuilder {
     content: String,
 }
 
 impl MainBuilder {
+    const SPACE: &'static str = "    ";
     fn new() -> Self {
         Self {
             content: String::new(),
@@ -11,12 +13,13 @@ impl MainBuilder {
     fn build(self) -> String {
         format!(
             "fn main() {{
-    {}}}",
+{}{}}}",
+            Self::SPACE,
             self.content
         )
     }
     fn add_line(mut self, line: &str) -> Self {
-        self.content = format!("{}{}\n    ", self.content, line);
+        self.content = format!("{}{}\n{}", self.content, line, Self::SPACE);
         self
     }
 }
