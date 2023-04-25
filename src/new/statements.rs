@@ -1,3 +1,6 @@
+pub fn add_rust_line(acc: &str, line: &str) -> String {
+    format!("{}\n    {}", acc, line)
+}
 pub struct Attribute {
     values: Vec<String>,
 }
@@ -9,16 +12,29 @@ impl Attribute {
     pub fn add(&mut self, value: impl Into<String>) {
         self.values.push(value.into());
     }
-    pub fn to_string(self) -> String {
+    pub fn to_string(&self) -> String {
         if self.values.len() > 0 {
             self.values
-                .into_iter()
+                .iter()
                 .map(|s| format!("#[{}]\n", s))
                 .reduce(|acc, s| format!("{}{}", acc, s))
                 .unwrap()
         } else {
             String::new()
         }
+    }
+}
+trait IntoAttr {
+    fn into_attr(self) -> Attribute;
+}
+impl<T> IntoAttr for T
+where
+    T: Into<String>,
+{
+    fn into_attr(self) -> Attribute {
+        let mut result = Attribute::new();
+        result.add(self);
+        result
     }
 }
 pub struct Derive {
