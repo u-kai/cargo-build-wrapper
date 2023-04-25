@@ -17,8 +17,8 @@ impl Attribute {
         if self.values.len() > 0 {
             self.values
                 .iter()
-                .map(|s| format!("#[{}]\n", s))
-                .reduce(|acc, s| format!("{}{}", acc, s))
+                .map(|s| format!("#[{}]", s))
+                .reduce(|acc, s| format!("{}\n{}", acc, s))
                 .unwrap()
         } else {
             String::new()
@@ -52,7 +52,7 @@ impl Derive {
     pub fn to_string(self) -> String {
         if self.values.len() > 0 {
             format!(
-                "#[derive({})]\n",
+                "#[derive({})]",
                 self.values
                     .into_iter()
                     .reduce(|acc, s| format!("{},{}", acc, s))
@@ -74,20 +74,20 @@ mod tests {
     fn derive_to_string_test() {
         let mut attr = Derive::new();
         attr.add("Debug");
-        assert_eq!(attr.to_string(), "#[derive(Debug)]\n");
+        assert_eq!(attr.to_string(), "#[derive(Debug)]");
         let mut attr = Derive::new();
         attr.add("Debug");
         attr.add("Clone");
-        assert_eq!(attr.to_string(), "#[derive(Debug,Clone)]\n")
+        assert_eq!(attr.to_string(), "#[derive(Debug,Clone)]")
     }
     #[test]
     fn attr_to_string_test() {
         let mut attr = Attribute::new();
         attr.add("cfg(test)");
-        assert_eq!(attr.to_string(), "#[cfg(test)]\n");
+        assert_eq!(attr.to_string(), "#[cfg(test)]");
         let mut attr = Attribute::new();
         attr.add("cfg(test)");
         attr.add("cfg(target=windows)");
-        assert_eq!(attr.to_string(), "#[cfg(test)]\n#[cfg(target=windows)]\n")
+        assert_eq!(attr.to_string(), "#[cfg(test)]\n#[cfg(target=windows)]")
     }
 }

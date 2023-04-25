@@ -100,7 +100,7 @@ impl FnBuilder {
     fn create_attr(&self) -> String {
         self.attr
             .as_ref()
-            .map(|attr| attr.to_string())
+            .map(|attr| format!("{}\n", attr.to_string()))
             .unwrap_or_default()
     }
     fn create_prefix_fn(&self) -> String {

@@ -1,6 +1,6 @@
 use crate::new::statements::add_rust_line;
 
-use super::statements::{Attribute, Derive};
+use super::statements::{Attribute, Derive, IntoAttr};
 
 type Key = String;
 type Type = String;
@@ -36,6 +36,17 @@ impl StructBuilder {
         self.fields.push(Filed::new(key, type_));
         self
     }
+    pub fn add_field_with_attr(
+        mut self,
+        key: impl Into<Key>,
+        type_: impl Into<Type>,
+        attr: impl IntoAttr,
+    ) -> Self {
+        let mut filed = Filed::new(key, type_);
+        filed.attr = Some(attr.into_attr());
+        self.fields.push(filed);
+        self
+    }
     pub fn add_derive(mut self, derive: impl Into<String>) -> Self {
         self.derives.add(derive);
         self
@@ -65,7 +76,7 @@ impl StructBuilder {
 
 #[derive(Debug)]
 struct Filed {
-    attr: Option<String>,
+    attr: Option<Attribute>,
     key: Key,
     type_: Type,
 }
@@ -93,6 +104,22 @@ impl Filed {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn 構造体をにフィールドにattrを追加できる() {
+        let result = StructBuilder::new("Cli")
+            .add_field_with_attr("key", "String", "clap(subcommand)")
+            .add_field("key2", "usize")
+            .build();
+
+        assert_eq!(
+            result,
+            r#"struct Cli {
+    #[clap(subcommand)]
+    key: String,
+    key2: usize,
+}"#
+        )
+    }
     #[test]
     fn 構造体をにフィールドを宣言できる() {
         let result = StructBuilder::new("Cli")
