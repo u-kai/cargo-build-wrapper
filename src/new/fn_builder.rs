@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use super::statements::{Attribute, IntoAttr};
+use super::statements::{add_rust_line, Attribute, IntoAttr};
 
 #[derive(Debug)]
 pub struct MainBuilder {
@@ -88,7 +88,7 @@ impl FnBuilder {
         self
     }
     pub fn add_line(mut self, line: &str) -> Self {
-        self.content = format!("{}\n{}{}", self.content, Self::SPACE, line);
+        self.content = add_rust_line(&self.content, line);
         self
     }
     fn create_return(&self) -> String {
