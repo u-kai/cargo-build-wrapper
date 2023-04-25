@@ -38,7 +38,7 @@ struct FnBuilder {
     name: String,
     content: String,
     args: HashMap<Arg, Type>,
-    retr: Option<Type>,
+    retu: Option<Type>,
     attr: Option<String>,
     async_mode: bool,
 }
@@ -52,7 +52,7 @@ impl FnBuilder {
             attr: None,
             async_mode: false,
             args: HashMap::new(),
-            retr: None,
+            retu: None,
         }
     }
     pub fn attr(self, attr: impl Into<String>) -> Self {
@@ -81,12 +81,16 @@ impl FnBuilder {
         self.args.insert(key.into(), type_.into());
         self
     }
+    pub fn retu(mut self, return_type: impl Into<Type>) -> Self {
+        self.retu = Some(return_type.into());
+        self
+    }
     pub fn add_line(mut self, line: &str) -> Self {
         self.content = format!("{}\n{}{}", self.content, Self::SPACE, line);
         self
     }
     fn create_return(&self) -> String {
-        self.retr
+        self.retu
             .as_ref()
             .map(|s| format!(" -> {}", s))
             .unwrap_or_default()
@@ -132,6 +136,15 @@ async fn main() {
         .run()
         .await
 }"#
+        );
+    }
+    #[test]
+    fn 関数に返り値を与えることができる() {
+        let main_str = FnBuilder::new("test").retu("String").build();
+        assert_eq!(
+            main_str,
+            "fn test() -> String {
+}"
         );
     }
     #[test]
