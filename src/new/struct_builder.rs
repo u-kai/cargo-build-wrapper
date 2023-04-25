@@ -1,28 +1,25 @@
-use std::collections::BTreeMap;
-
 use crate::new::statements::add_rust_line;
 
-use super::statements::Attribute;
+use super::statements::{Attribute, Derive};
 
 type Key = String;
 type Type = String;
 pub struct StructBuilder {
     name: String,
-    fields: BTreeMap<Key, Type>,
+    fields: Vec<Filed>,
     attr: Option<Attribute>,
     is_pub: bool,
-    derives: Vec<String>,
+    derives: Derive,
 }
 
 impl StructBuilder {
-    const SPACE: &'static str = "    ";
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
-            fields: BTreeMap::new(),
+            fields: Vec::new(),
             attr: None,
             is_pub: false,
-            derives: Vec::new(),
+            derives: Derive::new(),
         }
     }
     pub fn build(self) -> String {
@@ -35,8 +32,12 @@ impl StructBuilder {
             self.create_fields()
         )
     }
-    fn add_field(mut self, key: impl Into<Key>, type_: impl Into<Type>) -> Self {
-        self.fields.insert(key.into(), type_.into());
+    pub fn add_field(mut self, key: impl Into<Key>, type_: impl Into<Type>) -> Self {
+        self.fields.push(Filed::new(key, type_));
+        self
+    }
+    pub fn add_derive(mut self, derive: impl Into<String>) -> Self {
+        self.derives.add(derive);
         self
     }
     fn create_prefix(&self) -> String {
@@ -56,8 +57,8 @@ impl StructBuilder {
         String::new()
     }
     fn create_fields(&self) -> String {
-        self.fields.iter().fold(String::new(), |acc, (key, value)| {
-            add_rust_line(&acc, &format!("{}: {},", key, value))
+        self.fields.iter().fold(String::new(), |acc, filed| {
+            format!("{}{}", &acc, &filed.create_fields())
         })
     }
 }
@@ -65,6 +66,29 @@ impl StructBuilder {
 #[derive(Debug)]
 struct Filed {
     attr: Option<String>,
+    key: Key,
+    type_: Type,
+}
+impl Filed {
+    fn new(key: impl Into<Key>, type_: impl Into<Type>) -> Self {
+        Self {
+            attr: None,
+            key: key.into(),
+            type_: type_.into(),
+        }
+    }
+    fn create_fields(&self) -> String {
+        add_rust_line(
+            &self.create_attr(),
+            &format!("{}: {},", self.key, self.type_),
+        )
+    }
+    fn create_attr(&self) -> String {
+        self.attr
+            .as_ref()
+            .map(|attr| add_rust_line("", &attr.to_string()))
+            .unwrap_or_default()
+    }
 }
 #[cfg(test)]
 mod tests {
