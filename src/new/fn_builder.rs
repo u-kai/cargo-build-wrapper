@@ -46,7 +46,6 @@ pub struct FnBuilder {
 }
 
 impl FnBuilder {
-    const SPACE: &'static str = "    ";
     fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
