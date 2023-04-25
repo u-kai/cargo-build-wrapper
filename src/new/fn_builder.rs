@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[derive(Debug)]
 pub struct MainBuilder {
@@ -34,10 +34,10 @@ impl MainBuilder {
 type Arg = String;
 type Type = String;
 #[derive(Debug)]
-struct FnBuilder {
+pub struct FnBuilder {
     name: String,
     content: String,
-    args: HashMap<Arg, Type>,
+    args: BTreeMap<Arg, Type>,
     retu: Option<Type>,
     attr: Option<String>,
     async_mode: bool,
@@ -51,7 +51,7 @@ impl FnBuilder {
             content: String::new(),
             attr: None,
             async_mode: false,
-            args: HashMap::new(),
+            args: BTreeMap::new(),
             retu: None,
         }
     }

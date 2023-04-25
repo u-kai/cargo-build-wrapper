@@ -1,2 +1,3 @@
 pub mod cmd;
-pub mod sample_code;
+pub mod fn_builder;
+pub mod struct_builder;
