@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use cw::{
     build::{BuildMode, CargoBuildWrapper},
-    new::CargoNewWrapper,
+    new::cmd::CargoNewWrapper,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
