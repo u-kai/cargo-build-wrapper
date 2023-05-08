@@ -105,7 +105,7 @@ impl Filed {
 mod tests {
     use super::*;
     #[test]
-    fn 構造体をにフィールドにattrを追加できる() {
+    fn 構造体のフィールドにattrを追加できる() {
         let result = StructBuilder::new("Cli")
             .add_field_with_attr("key", "String", "clap(subcommand)")
             .add_field("key2", "usize")
@@ -121,7 +121,7 @@ mod tests {
         )
     }
     #[test]
-    fn 構造体をにフィールドを宣言できる() {
+    fn 構造体のフィールドを宣言できる() {
         let result = StructBuilder::new("Cli")
             .add_field("key", "String")
             .add_field("key2", "usize")

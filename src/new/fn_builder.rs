@@ -18,6 +18,11 @@ impl MainBuilder {
             inner: self.inner.attr(attr),
         }
     }
+    pub fn retu(self, retu: impl Into<String>) -> Self {
+        Self {
+            inner: self.inner.retu(retu),
+        }
+    }
     pub fn async_mode(self) -> Self {
         Self {
             inner: self.inner.async_mode(),
@@ -46,7 +51,7 @@ pub struct FnBuilder {
 }
 
 impl FnBuilder {
-    fn new(name: impl Into<String>) -> Self {
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
             content: String::new(),

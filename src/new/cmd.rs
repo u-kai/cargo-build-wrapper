@@ -5,6 +5,16 @@ use crate::{
     commands::{run_command, write_file},
 };
 
+pub struct RustNewProjectOptions {
+    name: String,
+    cli: bool,
+    web: bool,
+    remote_client: bool,
+    docker_file: bool,
+}
+
+impl RustNewProjectOptions {}
+
 pub struct CargoNewWrapper {
     name: String,
 }
