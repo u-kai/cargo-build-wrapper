@@ -1,14 +1,17 @@
 use crate::new::statements::add_rust_line;
 
-use super::statements::{Attribute, Derive, IntoAttr};
+use super::{
+    comment_builder::{InnerCommentBuilder, OuterCommentBuilder},
+    statements::{Attribute, Derive, IntoAttr},
+};
 
 type Key = String;
 type Type = String;
 pub struct StructBuilder {
     name: String,
     fields: Vec<Filed>,
-    inner_comments: Vec<String>,
-    outer_comments: Vec<String>,
+    inner_comments: InnerCommentBuilder,
+    outer_comments: OuterCommentBuilder,
     attr: Option<Attribute>,
     is_pub: bool,
     is_enum: bool,
@@ -18,20 +21,20 @@ pub struct StructBuilder {
 impl StructBuilder {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
-            inner_comments: Vec::new(),
-            outer_comments: Vec::new(),
             is_enum: false,
             name: name.into(),
             fields: Vec::new(),
             attr: None,
             is_pub: false,
             derives: Derive::new(),
+            inner_comments: InnerCommentBuilder::new(),
+            outer_comments: OuterCommentBuilder::new(),
         }
     }
     pub fn new_enum(name: impl Into<String>) -> Self {
         Self {
-            inner_comments: Vec::new(),
-            outer_comments: Vec::new(),
+            inner_comments: InnerCommentBuilder::new(),
+            outer_comments: OuterCommentBuilder::new(),
             is_enum: true,
             name: name.into(),
             fields: Vec::new(),
@@ -41,22 +44,33 @@ impl StructBuilder {
         }
     }
     pub fn build(self) -> String {
+        let outer_comments = self.outer_comments.build();
+        let fileds = self
+            .fields
+            .iter()
+            .fold(self.inner_comments.build(), |acc, filed| {
+                format!("{}{}", &acc, &filed.create_fields())
+            });
+        let prefix = if self.is_enum { "enum" } else { "struct" };
+        let prefix = if self.is_pub {
+            format!("pub {} {}", prefix, self.name)
+        } else {
+            format!("{} {}", prefix, self.name)
+        };
+        let attr = self.attr.map(|attr| attr.to_string()).unwrap_or_default();
+        let derives = self.derives.to_string();
         format!(
             "{}{}{}{} {{{}
 }}",
-            self.create_outer_comments(),
-            self.create_attr(),
-            self.create_derives(),
-            self.create_prefix(),
-            self.create_fields()
+            outer_comments, attr, derives, prefix, fileds
         )
     }
-    pub fn add_outer_comment(mut self, comment: impl Into<String>) -> Self {
-        self.outer_comments.push(comment.into());
+    pub fn add_outer_comment(mut self, comment: &str) -> Self {
+        self.outer_comments = self.outer_comments.add_comment(comment);
         self
     }
-    pub fn add_inner_comment(mut self, comment: impl Into<String>) -> Self {
-        self.inner_comments.push(comment.into());
+    pub fn add_inner_comment(mut self, comment: &str) -> Self {
+        self.inner_comments = self.inner_comments.add_comment(comment);
         self
     }
     pub fn add_field(mut self, key: impl Into<Key>, type_: impl Into<Type>) -> Self {
@@ -82,42 +96,6 @@ impl StructBuilder {
     pub fn add_derive(mut self, derive: impl Into<String>) -> Self {
         self.derives.add(derive);
         self
-    }
-    fn create_outer_comments(&self) -> String {
-        self.outer_comments
-            .iter()
-            .fold(String::new(), |acc, comment| {
-                format!("{}// {}\n", acc, comment)
-            })
-    }
-    fn create_prefix(&self) -> String {
-        let prefix = if self.is_enum { "enum" } else { "struct" };
-        if self.is_pub {
-            format!("pub {} {}", prefix, self.name)
-        } else {
-            format!("{} {}", prefix, self.name)
-        }
-    }
-    fn create_attr(&self) -> String {
-        self.attr
-            .as_ref()
-            .map(|attr| attr.to_string())
-            .unwrap_or_default()
-    }
-    fn create_derives(&self) -> String {
-        String::new()
-    }
-    fn create_fields(&self) -> String {
-        let comment = self
-            .inner_comments
-            .iter()
-            .fold(String::new(), |acc, comment| {
-                let comment = format!("// {}", comment);
-                add_rust_line(acc.as_str(), comment.as_str())
-            });
-        self.fields.iter().fold(comment, |acc, filed| {
-            format!("{}{}", &acc, &filed.create_fields())
-        })
     }
 }
 

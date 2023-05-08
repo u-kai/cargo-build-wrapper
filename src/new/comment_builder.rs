@@ -1,3 +1,5 @@
+use super::statements::add_rust_line;
+
 pub struct InnerCommentBuilder {
     inner: String,
 }
@@ -9,11 +11,16 @@ impl InnerCommentBuilder {
         }
     }
     pub fn add_comment(mut self, comment: &str) -> Self {
-        self.inner.push_str(&format!("    // {}\n", comment));
+        self.inner = add_rust_line(self.inner.as_str(), &format!("// {}", comment));
         Self { inner: self.inner }
     }
     pub fn build(self) -> String {
         self.inner
+    }
+}
+impl Default for InnerCommentBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 pub struct OuterCommentBuilder {
@@ -31,6 +38,11 @@ impl OuterCommentBuilder {
     }
     pub fn build(self) -> String {
         self.inner
+    }
+}
+impl Default for OuterCommentBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 #[cfg(test)]
@@ -59,9 +71,9 @@ mod tests {
 
         assert_eq!(
             result,
-            r#"    // test
-    // fuga
-"#
+            r#"
+    // test
+    // fuga"#
         )
     }
 }

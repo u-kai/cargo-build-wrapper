@@ -5,6 +5,11 @@ pub fn add_rust_line(acc: &str, line: &str) -> String {
 pub struct Attribute {
     values: Vec<String>,
 }
+impl Default for Attribute {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Attribute {
     pub fn new() -> Self {
@@ -40,6 +45,11 @@ where
 }
 pub struct Derive {
     values: Vec<String>,
+}
+impl Default for Derive {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Derive {
