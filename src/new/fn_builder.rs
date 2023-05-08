@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
-use super::statements::{add_rust_line, Attribute, IntoAttr};
+use super::{
+    comment_builder::{InnerCommentBuilder, OuterCommentBuilder},
+    statements::{add_rust_line, Attribute, IntoAttr},
+};
 
 #[derive(Debug)]
 pub struct MainBuilder {
@@ -31,6 +34,16 @@ impl MainBuilder {
     pub fn build(self) -> String {
         self.inner.build()
     }
+    pub fn add_outer_comment(self, comment: &str) -> Self {
+        Self {
+            inner: self.inner.add_outer_comment(comment),
+        }
+    }
+    pub fn add_inner_comment(self, comment: &str) -> Self {
+        Self {
+            inner: self.inner.add_inner_comment(comment),
+        }
+    }
     pub fn add_line(self, line: &str) -> Self {
         Self {
             inner: self.inner.add_line(line),
@@ -48,6 +61,8 @@ pub struct FnBuilder {
     retu: Option<Type>,
     attr: Option<Attribute>,
     async_mode: bool,
+    inner_comment: InnerCommentBuilder,
+    outer_comment: OuterCommentBuilder,
 }
 
 impl FnBuilder {
@@ -59,11 +74,25 @@ impl FnBuilder {
             async_mode: false,
             args: BTreeMap::new(),
             retu: None,
+            inner_comment: InnerCommentBuilder::new(),
+            outer_comment: OuterCommentBuilder::new(),
         }
     }
     pub fn attr(self, attr: impl Into<String>) -> Self {
         Self {
             attr: Some(attr.into_attr()),
+            ..self
+        }
+    }
+    pub fn add_inner_comment(self, comment: &str) -> Self {
+        Self {
+            inner_comment: self.inner_comment.add_comment(comment),
+            ..self
+        }
+    }
+    pub fn add_outer_comment(self, comment: &str) -> Self {
+        Self {
+            outer_comment: self.outer_comment.add_comment(comment),
             ..self
         }
     }
@@ -94,6 +123,9 @@ impl FnBuilder {
     pub fn add_line(mut self, line: &str) -> Self {
         self.content = add_rust_line(&self.content, line);
         self
+    }
+    fn create_outer_comment(&self) -> &str {
+        self.outer_comment.str()
     }
     fn create_return(&self) -> String {
         self.retu
@@ -172,6 +204,21 @@ async fn main() {
             main_str,
             "#[tokio::main]
 fn main() {
+}"
+        );
+    }
+    #[test]
+    fn 関数内部と外部にコメントを出力することができる() {
+        let main_str = MainBuilder::new()
+            .add_outer_comment("test_outer")
+            .add_inner_comment("test_inner")
+            .build();
+
+        assert_eq!(
+            main_str,
+            "// test_outer
+async fn main() {
+    // test_inner
 }"
         );
     }

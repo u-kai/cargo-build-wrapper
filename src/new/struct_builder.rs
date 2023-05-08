@@ -44,25 +44,14 @@ impl StructBuilder {
         }
     }
     pub fn build(self) -> String {
-        let outer_comments = self.outer_comments.build();
-        let fileds = self
-            .fields
-            .iter()
-            .fold(self.inner_comments.build(), |acc, filed| {
-                format!("{}{}", &acc, &filed.create_fields())
-            });
-        let prefix = if self.is_enum { "enum" } else { "struct" };
-        let prefix = if self.is_pub {
-            format!("pub {} {}", prefix, self.name)
-        } else {
-            format!("{} {}", prefix, self.name)
-        };
-        let attr = self.attr.map(|attr| attr.to_string()).unwrap_or_default();
-        let derives = self.derives.to_string();
         format!(
             "{}{}{}{} {{{}
 }}",
-            outer_comments, attr, derives, prefix, fileds
+            self.create_outer_comments(),
+            self.create_attr(),
+            self.create_derives(),
+            self.create_prefix(),
+            self.create_fields()
         )
     }
     pub fn add_outer_comment(mut self, comment: &str) -> Self {
@@ -96,6 +85,33 @@ impl StructBuilder {
     pub fn add_derive(mut self, derive: impl Into<String>) -> Self {
         self.derives.add(derive);
         self
+    }
+    fn create_outer_comments(&self) -> &str {
+        self.outer_comments.str()
+    }
+    fn create_prefix(&self) -> String {
+        let prefix = if self.is_enum { "enum" } else { "struct" };
+        if self.is_pub {
+            format!("pub {} {}", prefix, self.name)
+        } else {
+            format!("{} {}", prefix, self.name)
+        }
+    }
+    fn create_attr(&self) -> String {
+        self.attr
+            .as_ref()
+            .map(|attr| attr.to_string())
+            .unwrap_or_default()
+    }
+    fn create_derives(&self) -> String {
+        String::new()
+    }
+    fn create_fields(&self) -> String {
+        self.fields
+            .iter()
+            .fold(self.inner_comments.str().to_string(), |acc, filed| {
+                format!("{}{}", &acc, &filed.create_fields())
+            })
     }
 }
 

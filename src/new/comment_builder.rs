@@ -1,5 +1,6 @@
 use super::statements::add_rust_line;
 
+#[derive(Debug)]
 pub struct InnerCommentBuilder {
     inner: String,
 }
@@ -14,6 +15,9 @@ impl InnerCommentBuilder {
         self.inner = add_rust_line(self.inner.as_str(), &format!("// {}", comment));
         Self { inner: self.inner }
     }
+    pub fn str(&self) -> &str {
+        self.inner.as_str()
+    }
     pub fn build(self) -> String {
         self.inner
     }
@@ -23,6 +27,7 @@ impl Default for InnerCommentBuilder {
         Self::new()
     }
 }
+#[derive(Debug)]
 pub struct OuterCommentBuilder {
     inner: String,
 }
@@ -35,6 +40,9 @@ impl OuterCommentBuilder {
     pub fn add_comment(mut self, comment: &str) -> Self {
         self.inner.push_str(&format!("// {}\n", comment));
         Self { inner: self.inner }
+    }
+    pub fn str(&self) -> &str {
+        self.inner.as_str()
     }
     pub fn build(self) -> String {
         self.inner
