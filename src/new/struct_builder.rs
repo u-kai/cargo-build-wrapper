@@ -7,6 +7,8 @@ type Type = String;
 pub struct StructBuilder {
     name: String,
     fields: Vec<Filed>,
+    inner_comments: Vec<String>,
+    outer_comments: Vec<String>,
     attr: Option<Attribute>,
     is_pub: bool,
     is_enum: bool,
@@ -16,6 +18,8 @@ pub struct StructBuilder {
 impl StructBuilder {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
+            inner_comments: Vec::new(),
+            outer_comments: Vec::new(),
             is_enum: false,
             name: name.into(),
             fields: Vec::new(),
@@ -26,6 +30,8 @@ impl StructBuilder {
     }
     pub fn new_enum(name: impl Into<String>) -> Self {
         Self {
+            inner_comments: Vec::new(),
+            outer_comments: Vec::new(),
             is_enum: true,
             name: name.into(),
             fields: Vec::new(),
@@ -43,6 +49,14 @@ impl StructBuilder {
             self.create_prefix(),
             self.create_fields()
         )
+    }
+    pub fn add_outer_comment(mut self, comment: impl Into<String>) -> Self {
+        self.outer_comments.push(comment.into());
+        self
+    }
+    pub fn add_inner_comment(mut self, comment: impl Into<String>) -> Self {
+        self.inner_comments.push(comment.into());
+        self
     }
     pub fn add_field(mut self, key: impl Into<Key>, type_: impl Into<Type>) -> Self {
         if self.is_enum {
@@ -86,7 +100,14 @@ impl StructBuilder {
         String::new()
     }
     fn create_fields(&self) -> String {
-        self.fields.iter().fold(String::new(), |acc, filed| {
+        let comment = self
+            .inner_comments
+            .iter()
+            .fold(String::new(), |acc, comment| {
+                let comment = format!("// {}", comment);
+                add_rust_line(acc.as_str(), comment.as_str())
+            });
+        self.fields.iter().fold(comment, |acc, filed| {
             format!("{}{}", &acc, &filed.create_fields())
         })
     }
@@ -160,6 +181,17 @@ mod tests {
         )
     }
     #[test]
+    fn 構造体の内部にコメントを記述できる() {
+        let result = StructBuilder::new("Cli").add_inner_comment("test").build();
+
+        assert_eq!(
+            result,
+            r#"struct Cli {
+    // test
+}"#
+        )
+    }
+    #[test]
     fn 構造体のフィールドを宣言できる() {
         let result = StructBuilder::new("Cli")
             .add_field("key", "String")
@@ -171,6 +203,19 @@ mod tests {
             r#"struct Cli {
     key: String,
     key2: usize,
+}"#
+        )
+    }
+    #[test]
+    fn enumのフィールドを型ありで生成することができる() {
+        let result = StructBuilder::new_enum("Cli")
+            .add_field("Key", "String")
+            .build();
+
+        assert_eq!(
+            result,
+            r#"enum Cli {
+    Key(String),
 }"#
         )
     }
