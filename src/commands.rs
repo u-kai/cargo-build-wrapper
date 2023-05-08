@@ -101,7 +101,7 @@ mod tests {
         assert_eq!(exes.len(), 1);
         assert_eq!(
             exes[0].as_path().as_os_str().to_str().unwrap(),
-            "target/debug/cbw"
+            "target/debug/cw"
         );
     }
 }

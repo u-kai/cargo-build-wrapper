@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use cw::{
     build::{BuildMode, CargoBuildWrapper},
-    new::cmd::CargoNewWrapper,
+    new::cmd::{CargoProjectCreator, RustNewProjectOptions},
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -21,18 +21,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             name,
             web,
             remote_client,
+            docker_file,
         } => {
-            let new = CargoNewWrapper::new(name);
-            if cli {
-                return new.create_new_cli_project();
-            }
-            if web {
-                return new.create_new_web_project();
-            }
-            if remote_client {
-                return new.create_new_client_project();
-            }
-            new.create_new_project()
+            let options = RustNewProjectOptions {
+                name,
+                cli,
+                web,
+                remote_client,
+                docker_file,
+            };
+            CargoProjectCreator::create_project_from_options(options)
         }
     }
 }
@@ -57,5 +55,7 @@ enum Sub {
         web: bool,
         #[clap(short, long)]
         remote_client: bool,
+        #[clap(short, long)]
+        docker_file: bool,
     },
 }
