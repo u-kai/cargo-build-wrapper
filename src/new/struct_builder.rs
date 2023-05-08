@@ -9,12 +9,24 @@ pub struct StructBuilder {
     fields: Vec<Filed>,
     attr: Option<Attribute>,
     is_pub: bool,
+    is_enum: bool,
     derives: Derive,
 }
 
 impl StructBuilder {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
+            is_enum: false,
+            name: name.into(),
+            fields: Vec::new(),
+            attr: None,
+            is_pub: false,
+            derives: Derive::new(),
+        }
+    }
+    pub fn new_enum(name: impl Into<String>) -> Self {
+        Self {
+            is_enum: true,
             name: name.into(),
             fields: Vec::new(),
             attr: None,
@@ -33,8 +45,13 @@ impl StructBuilder {
         )
     }
     pub fn add_field(mut self, key: impl Into<Key>, type_: impl Into<Type>) -> Self {
-        self.fields.push(Filed::new(key, type_));
-        self
+        if self.is_enum {
+            self.fields.push(Filed::new_enum(key, type_));
+            self
+        } else {
+            self.fields.push(Filed::new(key, type_));
+            self
+        }
     }
     pub fn add_field_with_attr(
         mut self,
@@ -52,10 +69,11 @@ impl StructBuilder {
         self
     }
     fn create_prefix(&self) -> String {
+        let prefix = if self.is_enum { "enum" } else { "struct" };
         if self.is_pub {
-            format!("pub struct {}", self.name)
+            format!("pub {} {}", prefix, self.name)
         } else {
-            format!("struct {}", self.name)
+            format!("{} {}", prefix, self.name)
         }
     }
     fn create_attr(&self) -> String {
@@ -76,6 +94,7 @@ impl StructBuilder {
 
 #[derive(Debug)]
 struct Filed {
+    is_enum: bool,
     attr: Option<Attribute>,
     key: Key,
     type_: Type,
@@ -83,16 +102,36 @@ struct Filed {
 impl Filed {
     fn new(key: impl Into<Key>, type_: impl Into<Type>) -> Self {
         Self {
+            is_enum: false,
+            attr: None,
+            key: key.into(),
+            type_: type_.into(),
+        }
+    }
+    fn new_enum(key: impl Into<Key>, type_: impl Into<Type>) -> Self {
+        Self {
+            is_enum: true,
             attr: None,
             key: key.into(),
             type_: type_.into(),
         }
     }
     fn create_fields(&self) -> String {
-        add_rust_line(
-            &self.create_attr(),
-            &format!("{}: {},", self.key, self.type_),
-        )
+        if self.is_enum {
+            if self.type_.len() > 0 {
+                add_rust_line(
+                    &self.create_attr(),
+                    &format!("{}({}),", self.key, self.type_),
+                )
+            } else {
+                add_rust_line(&self.create_attr(), &format!("{},", self.key))
+            }
+        } else {
+            add_rust_line(
+                &self.create_attr(),
+                &format!("{}: {},", self.key, self.type_),
+            )
+        }
     }
     fn create_attr(&self) -> String {
         self.attr
@@ -132,6 +171,27 @@ mod tests {
             r#"struct Cli {
     key: String,
     key2: usize,
+}"#
+        )
+    }
+    #[test]
+    fn enumのフィールドを型なしで生成することができる() {
+        let result = StructBuilder::new_enum("Cli").add_field("Key", "").build();
+
+        assert_eq!(
+            result,
+            r#"enum Cli {
+    Key,
+}"#
+        )
+    }
+    #[test]
+    fn enumを生成することができる() {
+        let result = StructBuilder::new_enum("Cli").build();
+
+        assert_eq!(
+            result,
+            r#"enum Cli {
 }"#
         )
     }
