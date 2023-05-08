@@ -27,6 +27,11 @@ pub struct CargoProjectCreator {
 }
 
 impl CargoProjectCreator {
+    const CLAP_VERSION: &'static str = "4.2.1";
+    const ACTIX_WEB_VERSION: &'static str = "4";
+    const TOKIO_VERSION: &'static str = "1";
+    const REQWEST_VERSION: &'static str = "0.11";
+    const SERDE_VERSION: &'static str = "1";
     pub fn new(name: impl Into<String>) -> Self {
         let name = name.into();
         Self {
@@ -36,10 +41,9 @@ impl CargoProjectCreator {
         }
     }
     pub fn cli(mut self) -> Self {
-        const CLAP_VERSION: &'static str = "4.2.1";
         self.cargo_toml_content.add_depend_with_attr(
             "clap",
-            CLAP_VERSION,
+            Self::CLAP_VERSION,
             ("features", vec!["derive"]),
         );
         let struct_builder = StructBuilder::new("Cli")
@@ -57,6 +61,33 @@ impl CargoProjectCreator {
             .add_struct_builder(enum_builder);
         self
     }
+    pub fn remote_client(mut self) -> Self {
+        self.cargo_toml_content.add_depend_with_attr(
+            "tokio",
+            Self::TOKIO_VERSION,
+            ("features", vec!["full"]),
+        );
+        self.cargo_toml_content
+            .add_depend("reqwest", Self::REQWEST_VERSION);
+        self.cargo_toml_content.add_depend_with_attr(
+            "serde",
+            Self::SERDE_VERSION,
+            ("features", vec!["derive"]),
+        );
+        self.cargo_toml_content
+            .add_depend("serde_json", Self::SERDE_VERSION);
+        self.main_rs = self.main_rs
+            .add_depend("use reqwest::Client;")
+            .add_depend("use std::collections::HashMap;")
+            .add_main_line("let mut map = HashMap::new();")
+            .add_main_line("map.insert(\"lang\",\"rust\");")
+            .add_main_line("map.insert(\"body\",\"json\");")
+            .add_main_line("let client = Client::new();")
+            .add_main_line("let res = client.post(\"http://httpbin.org/post\").json(&map).send().await.unwrap();")
+            .async_main_mode()
+            .main_attr("tokio::main");
+        self
+    }
     pub fn create_new_project(self) -> Result<(), Box<dyn std::error::Error>> {
         let project_root: &Path = self.name.as_ref();
         let cargo_toml_content = self.cargo_toml_content.gen();
@@ -72,6 +103,27 @@ impl CargoProjectCreator {
 mod tests {
 
     use super::*;
+    #[test]
+    fn remote_client_snap_shot_test() {
+        let remote_client = CargoProjectCreator::new("remote_client")
+            .remote_client()
+            .main_rs
+            .build();
+        assert_eq!(
+            remote_client,
+            r#"use reqwest::Client;
+use std::collections::HashMap;
+
+#[tokio::main]
+async fn main() {
+    let mut map = HashMap::new();
+    map.insert("lang","rust");
+    map.insert("body","json");
+    let client = Client::new();
+    let res = client.post("http://httpbin.org/post").json(&map).send().await.unwrap();
+}"#
+        );
+    }
     #[test]
     fn cli_snap_shot_test() {
         let cli = CargoProjectCreator::new("cli").cli().main_rs.build();
