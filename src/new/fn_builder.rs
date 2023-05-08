@@ -104,11 +104,13 @@ impl FnBuilder {
     }
     pub fn build(self) -> String {
         format!(
-            "{}{}{} {{{}
+            "{}{}{}{} {{{}{}
 }}",
+            self.create_outer_comment(),
             self.create_attr(),
             self.create_prefix_fn(),
             self.create_return(),
+            self.inner_comment.str(),
             self.content
         )
     }
@@ -217,7 +219,7 @@ fn main() {
         assert_eq!(
             main_str,
             "// test_outer
-async fn main() {
+fn main() {
     // test_inner
 }"
         );
