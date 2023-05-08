@@ -1,10 +1,14 @@
 use std::path::Path;
 
 use crate::{
-    cargo_toml::CargoTomlContent,
+    cargo_toml::{self, CargoTomlContent},
     commands::{run_command, write_file},
+    new::struct_builder::StructBuilder,
 };
 
+use super::code_builder::MainRsBuilder;
+
+#[derive(Debug)]
 pub struct RustNewProjectOptions {
     name: String,
     cli: bool,
@@ -14,6 +18,84 @@ pub struct RustNewProjectOptions {
 }
 
 impl RustNewProjectOptions {}
+
+#[derive(Debug)]
+pub struct CargoProjectCreator {
+    name: String,
+    cargo_toml_content: CargoTomlContent,
+    main_rs: MainRsBuilder,
+}
+
+impl CargoProjectCreator {
+    pub fn new(name: impl Into<String>) -> Self {
+        let name = name.into();
+        Self {
+            cargo_toml_content: CargoTomlContent::new(name.as_str()),
+            name,
+            main_rs: MainRsBuilder::new(),
+        }
+    }
+    pub fn cli(mut self) -> Self {
+        const CLAP_VERSION: &'static str = "4.2.1";
+        self.cargo_toml_content.add_depend_with_attr(
+            "clap",
+            CLAP_VERSION,
+            ("features", vec!["derive"]),
+        );
+        let struct_builder = StructBuilder::new("Cli")
+            .add_derive("Parser")
+            .add_field_with_attr("sub", "Sub", "clap(subcommand)");
+        let enum_builder = StructBuilder::new_enum("Sub")
+            .add_derive("Subcommand")
+            .add_inner_comment("sub command hear")
+            .add_inner_comment("#[clap(short, long)]");
+        self.main_rs = self
+            .main_rs
+            .add_depend("use clap::{Parser, Subcommand};")
+            .add_main_line("let cli = Cli::parse();")
+            .add_struct_builder(struct_builder)
+            .add_struct_builder(enum_builder);
+        self
+    }
+    pub fn create_new_project(self) -> Result<(), Box<dyn std::error::Error>> {
+        let project_root: &Path = self.name.as_ref();
+        let cargo_toml_content = self.cargo_toml_content.gen();
+        let main_rs = self.main_rs.build();
+        run_command("cargo", &["new", self.name.as_str()])?;
+        write_file(project_root.join("Cargo.toml"), &cargo_toml_content)?;
+        write_file(project_root.join("src/main.rs"), &main_rs)?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    #[test]
+    fn cli_snap_shot_test() {
+        let cli = CargoProjectCreator::new("cli").cli().main_rs.build();
+        assert_eq!(
+            cli,
+            r#"use clap::{Parser, Subcommand};
+
+fn main() {
+    let cli = Cli::parse();
+}
+
+#[derive(Parser)]
+struct Cli {
+    #[clap(subcommand)]
+    sub: Sub,
+}
+#[derive(Subcommand)]
+enum Sub {
+    // sub command hear
+    // #[clap(short, long)]
+}"#
+        )
+    }
+}
 
 pub struct CargoNewWrapper {
     name: String,
@@ -151,3 +233,11 @@ CMD ["./{}"]"#,
         )
     }
 }
+
+//#[cfg(test)]
+//mod tests {
+//#[test]
+//fn cli_snap_shot_test(){
+//let
+//}
+//}

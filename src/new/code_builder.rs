@@ -3,6 +3,7 @@ use super::{
     struct_builder::StructBuilder,
 };
 
+#[derive(Debug)]
 pub struct MainRsBuilder {
     depends: Vec<String>,
     inner: MainBuilder,
@@ -48,6 +49,22 @@ impl MainRsBuilder {
             depends: self.depends,
             fn_builders: self.fn_builders,
             inner: self.inner.add_line(line),
+            struct_builders: self.struct_builders,
+        }
+    }
+    pub fn add_main_inner_comment(self, comment: &str) -> Self {
+        Self {
+            depends: self.depends,
+            fn_builders: self.fn_builders,
+            inner: self.inner.add_inner_comment(comment),
+            struct_builders: self.struct_builders,
+        }
+    }
+    pub fn add_main_outer_comment(self, comment: &str) -> Self {
+        Self {
+            depends: self.depends,
+            fn_builders: self.fn_builders,
+            inner: self.inner.add_outer_comment(comment),
             struct_builders: self.struct_builders,
         }
     }

@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+#[derive(Debug)]
 pub struct CargoTomlContent {
     name: String,
     dependencies: Vec<CargoDepend>,
@@ -65,11 +66,13 @@ edition = "{}"
         self.dependencies.push(depend);
     }
 }
+#[derive(Debug)]
 struct CargoDepend {
     name: String,
     version: String,
     attr: BTreeMap<String, String>,
 }
+#[derive(Debug)]
 enum RustEdition {
     V2021,
     V2018,

@@ -7,6 +7,7 @@ use super::{
 
 type Key = String;
 type Type = String;
+#[derive(Debug)]
 pub struct StructBuilder {
     name: String,
     fields: Vec<Filed>,
@@ -104,7 +105,12 @@ impl StructBuilder {
             .unwrap_or_default()
     }
     fn create_derives(&self) -> String {
-        String::new()
+        let derive = self.derives.clone().to_string();
+        if derive.len() > 0 {
+            format!("{}\n", derive)
+        } else {
+            "".to_string()
+        }
     }
     fn create_fields(&self) -> String {
         self.fields
@@ -258,6 +264,17 @@ struct Cli {
         assert_eq!(
             result,
             r#"enum Cli {
+}"#
+        )
+    }
+    #[test]
+    fn 構造体にderiveできる() {
+        let result = StructBuilder::new("Cli").add_derive("Parser").build();
+
+        assert_eq!(
+            result,
+            r#"#[derive(Parser)]
+struct Cli {
 }"#
         )
     }

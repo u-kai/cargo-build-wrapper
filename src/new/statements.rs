@@ -43,6 +43,7 @@ where
         result
     }
 }
+#[derive(Debug, Clone)]
 pub struct Derive {
     values: Vec<String>,
 }
