@@ -42,8 +42,9 @@ impl StructBuilder {
     }
     pub fn build(self) -> String {
         format!(
-            "{}{}{} {{{}
+            "{}{}{}{} {{{}
 }}",
+            self.create_outer_comments(),
             self.create_attr(),
             self.create_derives(),
             self.create_prefix(),
@@ -81,6 +82,13 @@ impl StructBuilder {
     pub fn add_derive(mut self, derive: impl Into<String>) -> Self {
         self.derives.add(derive);
         self
+    }
+    fn create_outer_comments(&self) -> String {
+        self.outer_comments
+            .iter()
+            .fold(String::new(), |acc, comment| {
+                format!("{}// {}\n", acc, comment)
+            })
     }
     fn create_prefix(&self) -> String {
         let prefix = if self.is_enum { "enum" } else { "struct" };
@@ -181,13 +189,32 @@ mod tests {
         )
     }
     #[test]
+    fn 構造体の上にコメントを記述できる() {
+        let result = StructBuilder::new("Cli")
+            .add_outer_comment("test")
+            .add_outer_comment("chore")
+            .build();
+
+        assert_eq!(
+            result,
+            r#"// test
+// chore
+struct Cli {
+}"#
+        )
+    }
+    #[test]
     fn 構造体の内部にコメントを記述できる() {
-        let result = StructBuilder::new("Cli").add_inner_comment("test").build();
+        let result = StructBuilder::new("Cli")
+            .add_inner_comment("test")
+            .add_inner_comment("fuga")
+            .build();
 
         assert_eq!(
             result,
             r#"struct Cli {
     // test
+    // fuga
 }"#
         )
     }
